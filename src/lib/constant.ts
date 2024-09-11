@@ -1,3 +1,14 @@
+import Call from '@/components/icons/call'
+import IntegrationsIcon from '@/components/icons/integration'
+import CoachingIcon from '@/components/icons/coaching'
+import Home from '@/components/icons/home'
+import AnalyticsIcon from '@/components/icons/analyse'
+import Settings from '@/components/icons/settings'
+import Workflows from '@/components/icons/workflows'
+import Clients from '@/components/icons/clients'
+
+
+
 export const clients = [...new Array(6)].map((client, index) => ({
     href: `/${index + 1}.png`,
   }))
@@ -83,15 +94,16 @@ export const clients = [...new Array(6)].map((client, index) => ({
     },
   ]
   
-  //export const menuOptions = [
-  //  { name: 'Dashboard', Component: Home, href: '/dashboard' },
-   // { name: 'Workflows', Component: Workflows, href: '/workflows' },
-   // { name: 'Settings', Component: Settings, href: '/settings' },
-   // { name: 'Connections', Component: Category, href: '/connections' },
-   // { name: 'Billing', Component: Payment, href: '/billing' },
-   // { name: 'Templates', Component: Templates, href: '/templates' },
-   // { name: 'Logs', Component: Logs, href: '/logs' },
-  //]
+  export const menuOptions = [
+    { name: 'Dashboard', Component: Home, href: '/dashboard' },
+    { name: 'Gespräche', Component: Call, href: '/anrufe' },
+    { name: 'Vertriebsanalyse', Component: AnalyticsIcon, href: '/analyse' },
+    { name: 'Coaching', Component: CoachingIcon, href: '/coaching' },
+    { name: 'Workflows', Component: Workflows, href: '/workflows' },
+    { name: 'Integration', Component: IntegrationsIcon, href: '/intergration' },
+    { name: 'Kunden', Component: Clients, href: '/clients' },
+    { name: 'Einstellung', Component: Settings, href: '/settings' },
+  ]
   
   export const EditorCanvasDefaultCardTypes = {
     Email: { description: 'Send and email to a user', type: 'Action' },

@@ -1,0 +1,169 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//User ist das zentrale Modell, das einen Verkäufer oder Nutzer repräsentiert. Es enthält grundlegende Informationen wie Name, E-Mail und eine Profilrolle (z.B. "Salesperson").
+//Außerdem gibt es Felder für Verknüpfungen zu anderen Modellen wie Conversation, Report, Feedback, Coaching, usw., was es dir ermöglicht, alle Aktivitäten und Leistungen eines Nutzers nachzuvollziehen.
+
+model User {
+  id                         Int                      @id @default(autoincrement())
+  clerkId                    String                   @unique  // Clerk-Authentifizierung
+  localGoogleId              String?                  @unique  // Optional: Google-Authentifizierung
+  googleResourceId           String?                  @unique  // Optional: Google-Authentifizierung
+  name                       String
+  email                      String                   @unique
+  profileImage               String?
+  role                       String                   @default("Salesperson")
+  createdAt                  DateTime                 @default(now())
+  updatedAt                  DateTime                 @updatedAt
+  tier                       String?                  @default("Free")  // Kostenloses oder kostenpflichtiges Konto
+  conversations              Conversation[]
+  reports                    Report[]
+  feedbacks                  Feedback[]
+  crmIntegrations            CRMIntegration[]
+  workflows                  Workflow[]
+  coachings                  Coaching[]
+  trainingModulesCompleted    TrainingCompletion[]
+  rolePlaySimulations         RolePlaySimulation[]
+}
+
+
+//Das Conversation-Modell speichert Details zu Gesprächen. Es enthält Felder für den Titel, das Transkript, die Zusammenfassung und Schlüsselwörter sowie eine Sentimentanalyse.
+//Diese Daten ermöglichen es dir, Gespräche zu analysieren und relevante Informationen wie wichtige Keywords und den Gesprächsverlauf zu speichern.
+model Conversation {
+  id            Int                   @id @default(autoincrement())
+  title         String
+  transcript    String
+  summary       String
+  keywords      String[]
+  sentiment     String
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  userId        Int
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysis      ConversationAnalysis?
+  feedbacks     Feedback[]
+}
+
+
+//Hier wird die Vertriebsleistung eines Gesprächs detailliert bewertet. Es speichert die Verkaufsperformance, Reaktionszeiten und Überzeugungstechniken. Dies ist zentral für deine KI-basierte Performance-Bewertung, die Vertrieblern Feedback über ihre Gesprächsstrategien gibt.
+
+model ConversationAnalysis {
+  id                  Int                   @id @default(autoincrement())
+  conversationId      Int                   @unique
+  conversation        Conversation          @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  salesPerformanceScore Float
+  responseTime        Float
+  questionCount       Int
+  persuasionTechniques String[]
+  recommendations     String
+}
+//Dieses Modell speichert Feedback, das entweder durch die KI oder durch Menschen gegeben wurde, z.B. das Rating eines Gesprächs oder Kommentare zu Verbesserungsmöglichkeiten. Dies ist wichtig für den Coaching-Teil deines Tools.
+model Feedback {
+  id            Int                   @id @default(autoincrement())
+  message       String
+  rating        Int
+  createdAt     DateTime              @default(now())
+  conversationId Int
+  conversation  Conversation          @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId        Int
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+//Dieses Modell speichert die Integration mit CRM-Systemen. Es ist für die Synchronisation der Gesprächsdaten und Analysen mit externen Systemen wie Salesforce oder HubSpot zuständig.
+model CRMIntegration {
+  id            Int                   @id @default(autoincrement())
+  platform      String
+  apiKey        String
+  lastSync      DateTime
+  userId        Int
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+//Hier werden Berichte zu den Vertriebsaktivitäten gespeichert. Das Tool generiert automatisierte Berichte, die du dann dem Vertriebler zur Verfügung stellen kannst.
+
+model Report {
+  id            Int                   @id @default(autoincrement())
+  title         String
+  description   String
+  reportFile    String
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  userId        Int
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+//Speichert GPT-gestütztes Feedback und die Fortschritte des Verkäufers. Du kannst so Coaching-Stufen definieren und den Fortschritt der Vertriebler in Bezug auf ihre Fähigkeiten verfolgen.
+
+model Coaching {
+  id            Int                   @id @default(autoincrement())
+  feedback      String                // GPT-gestütztes Feedback
+  improvementStage String             // Fortschritt: z.B. "Stufe 1", "Stufe 2"
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  userId        Int
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+//Diese Modelle repräsentieren Lernmodule, die traditionelle Verkaufstrainings beinhalten. TrainingModule speichert Informationen über den Inhalt der Module, während TrainingCompletion die Ergebnisse eines Verkäufers in einem bestimmten Training speichert.
+
+model TrainingModule {
+  id            Int                   @id @default(autoincrement())
+  title         String
+  description   String
+  difficultyLevel String              // z.B. Anfänger, Fortgeschritten
+  content       String                // Link zu Videos oder Dokumenten
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  completions   TrainingCompletion[]
+}
+model TrainingCompletion {
+  id            Int                   @id @default(autoincrement())
+  score         Int                   // Punktzahl bei einem Test
+  moduleId      Int
+  module        TrainingModule        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  userId        Int
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completedAt   DateTime              @default(now())
+}
+
+//Hier wird das Rollenspiel-Feature abgebildet, bei dem Vertriebler mit der KI in simulierten Verkaufsszenarien interagieren und Echtzeit-Feedback erhalten.
+
+model RolePlaySimulation {
+  id            Int                   @id @default(autoincrement())
+  scenarioType  String                // z.B. Einwände überwinden, Preisverhandlungen
+  feedback      String                // Echtzeit-Feedback von der KI
+  createdAt     DateTime              @default(now())
+  userId        Int
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+//Diese Modelle definieren Arbeitsabläufe und Schritte, die für die Vertriebsaktivitäten erstellt werden können. Jeder Workflow kann mehrere Schritte haben, die erledigt werden müssen, um z.B. ein Verkaufsgespräch erfolgreich abzuschließen.
+
+model Workflow {
+  id            Int                   @id @default(autoincrement())
+  name          String
+  description   String
+  isActive      Boolean               @default(true)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  userId        Int
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  steps         Step[]
+}
+
+model Step {
+  id            Int                   @id @default(autoincrement())
+  title         String
+  details       String
+  completed     Boolean               @default(false)
+  workflowId    Int
+  workflow      Workflow              @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+}

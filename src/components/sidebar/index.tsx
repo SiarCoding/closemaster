@@ -1,12 +1,75 @@
 'use client'
-import React from 'react'
+import { usePathname } from 'next/navigation';
+import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { menuOptions } from '@/lib/constant'
+import clsx from 'clsx'
+import { Separator } from "@/components/ui/separator"
+import { ModeToggle } from '../global/mode-toggle'
 
-type Props = {}
+
+
+
+type Props = {};
 
 const MenuOptions = (props: Props) => {
+  const pathName = usePathname();
   return (
-    <div>MenuOptions</div>
-  )
-}
+    <nav className="dark:bg-black h-screen overflow-scroll justify-between flex items-center flex-col gap-10 py-6 px-2">
+      <div className="flex items-center justify-center flex-col gap-8">
+        {/* Use Image component instead of Link for the logo */}
+        <Link href="/">
+          <Image
+            src="/Logo.png"
+            alt="Logo"
+            width={60}  // Specify the width and height
+            height={60}
+            className="flex font-bold"
+          />
+        </Link>
+        <TooltipProvider>
+          {menuOptions.map((menuItem) => (
+            <ul key={menuItem.name}>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger>
+                  <li>
+                    <Link
+                      href={menuItem.href}
+                      className={clsx(
+                        'group h-8 w-8 flex items-center justify-center scale-[1.5] rounded-lg p-[3px] cursor-pointer',
+                        {
+                          'dark:bg-[#2F006B] bg-[#EEE0FF] ': pathName === menuItem.href,
+                        }
+                      )}
+                    >
+                      <menuItem.Component selected={pathName === menuItem.href} />
+                    </Link>
+                  </li>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="right"
+                  className="bg-black/10 backdrop-blur-xl"
+                >
+                  <p>{menuItem.name}</p>
+                </TooltipContent>
+              </Tooltip>
+            </ul>
+          ))}
+        </TooltipProvider>
+        <Separator />
+        <div className="flex items-center justify-center flex-col gap-8">
+          <ModeToggle />
+        </div>
+      </div>
+    </nav>
+  );
+};
 
-export default MenuOptions
+export default MenuOptions;
