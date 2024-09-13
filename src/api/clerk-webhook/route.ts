@@ -7,6 +7,8 @@ export async function POST(req: Request) {
     const { id, email_addresses, first_name, image_url, public_metadata } = body?.data
 
     const email = email_addresses[0]?.email_address
+    const tier = public_metadata?.tier || 'Free' // Optional: tier wird von Clerk geliefert
+
     console.log('✅ Webhook Payload:', body)
 
     await db.user.upsert({
@@ -23,6 +25,7 @@ export async function POST(req: Request) {
         profileImage: image_url || '',
       },
     })
+    
     return new NextResponse('User updated in database successfully', {
       status: 200,
     })

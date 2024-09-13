@@ -1,75 +1,21 @@
-'use client'
-import { usePathname } from 'next/navigation';
-import React from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { menuOptions } from '@/lib/constant'
-import clsx from 'clsx'
-import { Separator } from "@/components/ui/separator"
-import { ModeToggle } from '../global/mode-toggle'
+import React from 'react'
+import { Home, LayoutDashboard, Users, Calendar, Settings } from 'lucide-react'
 
-
-
-
-type Props = {};
-
-const MenuOptions = (props: Props) => {
-  const pathName = usePathname();
+export default function Sidebar() {
   return (
-    <nav className="dark:bg-black h-screen overflow-scroll justify-between flex items-center flex-col gap-10 py-6 px-2">
-      <div className="flex items-center justify-center flex-col gap-8">
-        {/* Use Image component instead of Link for the logo */}
-        <Link href="/">
-          <Image
-            src="/Logo.png"
-            alt="Logo"
-            width={60}  // Specify the width and height
-            height={60}
-            className="flex font-bold"
-          />
-        </Link>
-        <TooltipProvider>
-          {menuOptions.map((menuItem) => (
-            <ul key={menuItem.name}>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger>
-                  <li>
-                    <Link
-                      href={menuItem.href}
-                      className={clsx(
-                        'group h-8 w-8 flex items-center justify-center scale-[1.5] rounded-lg p-[3px] cursor-pointer',
-                        {
-                          'dark:bg-[#2F006B] bg-[#EEE0FF] ': pathName === menuItem.href,
-                        }
-                      )}
-                    >
-                      <menuItem.Component selected={pathName === menuItem.href} />
-                    </Link>
-                  </li>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="right"
-                  className="bg-black/10 backdrop-blur-xl"
-                >
-                  <p>{menuItem.name}</p>
-                </TooltipContent>
-              </Tooltip>
-            </ul>
-          ))}
-        </TooltipProvider>
-        <Separator />
-        <div className="flex items-center justify-center flex-col gap-8">
-          <ModeToggle />
+    <aside className="w-20 bg-indigo-600 text-white p-4 flex flex-col items-center h-screen">
+      <div className="mb-8">
+        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-indigo-600 font-bold">
+          L
         </div>
       </div>
-    </nav>
-  );
-};
-
-export default MenuOptions;
+      <nav className="flex-1 flex flex-col items-center space-y-4">
+        <button className="p-2 rounded-lg bg-indigo-700"><Home size={24} /></button>
+        <button className="p-2 rounded-lg hover:bg-indigo-700"><LayoutDashboard size={24} /></button>
+        <button className="p-2 rounded-lg hover:bg-indigo-700"><Users size={24} /></button>
+        <button className="p-2 rounded-lg hover:bg-indigo-700"><Calendar size={24} /></button>
+      </nav>
+      <button className="mt-auto p-2 rounded-lg hover:bg-indigo-700"><Settings size={24} /></button>
+    </aside>
+  )
+}
