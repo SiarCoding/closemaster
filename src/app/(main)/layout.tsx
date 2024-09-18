@@ -1,18 +1,9 @@
-import React from 'react';
-import Sidebar from '@/components/sidebar';
-import InfoBar from '@/components/infobar';
+'use client';
 
-type Props = { children: React.ReactNode }
-
-const Layout = (props: Props) => {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex overflow-hidden h-screen">
-      <Sidebar />
-      <div className="w-full">
-        <InfoBar/>
-        {props.children}</div>  {/* Render the children */}
-    </div>
+    <html lang="en">
+      <body>{children}</body>
+    </html>
   );
 }
-
-export default Layout;
