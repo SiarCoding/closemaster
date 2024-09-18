@@ -67,7 +67,6 @@ export default function TeamComparison() {
           </ul>
         </div>
 
-        {/* Badges */}
         <div>
           <h3 className="text-lg font-semibold mb-2 text-gray-700">Errungenschaften</h3>
           <div className="flex space-x-2">
