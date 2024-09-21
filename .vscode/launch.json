@@ -1,0 +1,10 @@
+{
+    "configurations": [
+        {
+            "type": "chrome",
+            "name": "http://node_modules/next/dist/compiled/next-server/app-page.runtime.dev.js:35:11808)",
+            "request": "launch",
+            "url": "http://node_modules/next/dist/compiled/next-server/app-page.runtime.dev.js:35:11808)"
+        }
+    ]
+}

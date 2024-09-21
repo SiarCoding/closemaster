@@ -1,32 +1,14 @@
-"use client";
+// /components/global/UpgradePlan.tsx
+import { Rocket } from 'lucide-react';
 
-import { Sidebar } from "@/components/sidebar";
-import { Infobar } from "@/components/infobar";
-import { DashboardCards } from "@/components/global/DashboardCards";
-import SalesPerformance from "@/components/global/SalesPerformance";
-import UpgradePlan from "@/components/global/UpgradePlan";
-import TeamComparison from "@/components/global/TeamComparison";
-
-export default function Dashboard() {
+export default function UpgradePlan() {  // Der Name der Komponente sollte mit einem Großbuchstaben beginnen
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Infobar />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
-          <div className="container mx-auto px-4 py-8 space-y-8">
-            <DashboardCards />
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <div className="xl:col-span-2">
-                <SalesPerformance />
-              </div>
-              <div className="xl:col-span-1 space-y-6">
-                <TeamComparison />
-                <UpgradePlan />
-              </div>
-            </div>
-          </div>
-        </main>
+    <div className="bg-blue-600 p-6 rounded-xl shadow text-white">
+      <h2 className="text-xl font-semibold mb-4">Upgrade auf Pro</h2>
+      <p className="mb-4">Erhalte erweiterte Funktionen und verbessere die Effizienz deines Vertriebs-Teams.</p>
+      <button className="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold">Jetzt starten</button>
+      <div className="mt-8 flex justify-end">
+        <Rocket size={48} />
       </div>
     </div>
   );

@@ -1,8 +1,8 @@
 'use client'
 
+import { useRef, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
-import React, { useEffect, useState } from 'react'
 
 export const InfiniteMovingCards = ({
   items,
@@ -19,15 +19,17 @@ export const InfiniteMovingCards = ({
   pauseOnHover?: boolean
   className?: string
 }) => {
-  const containerRef = React.useRef<HTMLDivElement>(null)
-  const scrollerRef = React.useRef<HTMLUListElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const scrollerRef = useRef<HTMLUListElement>(null)
+  const [start, setStart] = useState(false)
 
   useEffect(() => {
-    addAnimation()
-  }, [])
-  
-  const [start, setStart] = useState(false)
-  function addAnimation() {
+    if (!start) {
+      addAnimation()
+    }
+  }, [start])
+
+  const addAnimation = () => {
     if (containerRef.current && scrollerRef.current) {
       const scrollerContent = Array.from(scrollerRef.current.children)
 
@@ -43,21 +45,17 @@ export const InfiniteMovingCards = ({
       setStart(true)
     }
   }
+
   const getDirection = () => {
     if (containerRef.current) {
       if (direction === 'left') {
-        containerRef.current.style.setProperty(
-          '--animation-direction',
-          'forwards'
-        )
+        containerRef.current.style.setProperty('--animation-direction', 'forwards')
       } else {
-        containerRef.current.style.setProperty(
-          '--animation-direction',
-          'reverse'
-        )
+        containerRef.current.style.setProperty('--animation-direction', 'reverse')
       }
     }
   }
+
   const getSpeed = () => {
     if (containerRef.current) {
       if (speed === 'fast') {
@@ -69,20 +67,20 @@ export const InfiniteMovingCards = ({
       }
     }
   }
-  console.log(items)
+
   return (
     <div
       ref={containerRef}
       className={cn(
-        'scroller relative z-20  max-w-7xl overflow-hidden  [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]',
+        'scroller relative z-20 max-w-7xl overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]',
         className
       )}
     >
       <ul
         ref={scrollerRef}
         className={cn(
-          ' flex min-w-full shrink-0 gap-10 py-4 w-max flex-nowrap',
-          start && 'animate-scroll ',
+          'flex min-w-full shrink-0 gap-10 py-4 w-max flex-nowrap',
+          start && 'animate-scroll',
           pauseOnHover && 'hover:[animation-play-state:paused]'
         )}
       >
@@ -92,7 +90,7 @@ export const InfiniteMovingCards = ({
             height={1}
             src={item.href}
             alt={item.href}
-            className=" relative rounded-2xl  object-contain opacity-50"
+            className="relative rounded-2xl object-contain opacity-50"
             key={item.href}
           />
         ))}

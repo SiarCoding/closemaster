@@ -1,42 +1,32 @@
 "use client";
 
-import { Sidebar } from "@/components/sidebar";
-import { Infobar } from "@/components/infobar";
-import { DashboardCards } from "@/components/global/DashboardCards";
-import SalesPerformance from "@/components/global/SalesPerformance";
-import { SearchFilter } from "@/components/global/SearchFilter";
+import { DashboardCards } from "@/app/(main)/(pages)/dashboard/_components/DashboardCards";
+import SalesPerformance from "@/app/(main)/(pages)/dashboard/_components/SalesPerformance";
 import UpgradePlan from "@/components/global/UpgradePlan";
-import ConversationTranscript from "@/components/global/ConversationTranscript";
-import TeamComparison from "@/components/global/TeamComparison";
+import TeamComparison from "@/app/(main)/(pages)/dashboard/_components/TeamComparison";
+import DailyGoals from "@/app/(main)/(pages)/dashboard/_components/DailyGoals";
+import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
+  const { theme } = useTheme();
+
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Infobar />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
-          <div className="container mx-auto px-4 py-8 space-y-8">
-            <DashboardCards />
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <div className="xl:col-span-2">
-                <SalesPerformance />
-              </div>
-              <div>
-                <TeamComparison />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <div className="xl:col-span-2">
-                <ConversationTranscript />
-              </div>
-              <div>
-                <UpgradePlan />
-              </div>
-            </div>
-            <SearchFilter />
-          </div>
-        </main>
+    <div className={cn(
+      "flex-1 overflow-y-auto",
+      theme === "dark" ? "bg-gray-900" : "bg-gray-100"
+    )}>
+      <div className={cn(
+        "max-w-7xl mx-auto p-6 space-y-6",
+        theme === "dark" ? "text-gray-100" : "text-gray-800"
+      )}>
+        <DashboardCards />
+        <SalesPerformance />
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <TeamComparison />
+          <DailyGoals />
+        </div>
+        <UpgradePlan />
       </div>
     </div>
   );
