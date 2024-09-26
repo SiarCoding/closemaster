@@ -9,151 +9,116 @@ datasource db {
 
 // User ist das zentrale Modell, das einen Verkäufer oder Nutzer repräsentiert.
 model User {
-  id                         Int                      @id @default(autoincrement())
-  clerkId                    String                   @unique
-  name                       String?
-  email                      String                   @unique
-  profileImage               String?
-  tier                       String?                  @default("Free")
-  credits                    String?                  @default("10")
-  createdAt                  DateTime                 @default(now())
-  updatedAt                  DateTime                 @updatedAt
-  localGoogleId              String?                  @unique
-  conversations              Conversation[]
-  reports                    Report[]
-  feedbacks                  Feedback[]
-  crmIntegrations            CRMIntegration[]
-  workflows                  Workflow[]
-  coachings                  Coaching[]
-  trainingModulesCompleted   TrainingCompletion[]
-  rolePlaySimulations        RolePlaySimulation[]
+  id                Int       @id @default(autoincrement())
+  clerkId           String    @unique
+  name              String?
+  email             String    @unique
+  profileImage      String?
+  tier              String    @default("Free")
+  credits           Int       @default(10)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  goals             Goal[]
+  trainings         Training[]
+  performances      Performance[]
+  coachingSessions  CoachingSession[]
+  customerNotes     CustomerNote[]
+  resources         Resource[]
+  communityPosts    CommunityPost[]
+  settings          Setting[]
 }
 
-
-// Conversation speichert Details zu Gesprächen.
-model Conversation {
-  id         Int                   @id @default(autoincrement())
-  title      String
-  transcript String
-  summary    String
-  keywords   String[]
-  sentiment  String
-  createdAt  DateTime              @default(now())
-  updatedAt  DateTime              @updatedAt
-  userId     Int
-  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  analysis   ConversationAnalysis?
-  feedbacks  Feedback[]
-}
-
-// ConversationAnalysis bewertet die Vertriebsleistung.
-model ConversationAnalysis {
-  id                    Int          @id @default(autoincrement())
-  conversationId        Int          @unique
-  conversation          Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  salesPerformanceScore Float
-  responseTime          Float
-  questionCount         Int
-  persuasionTechniques  String[]
-  recommendations       String
-}
-
-// Feedback speichert das Gesprächs-Feedback.
-model Feedback {
-  id             Int          @id @default(autoincrement())
-  message        String
-  rating         Int
-  createdAt      DateTime     @default(now())
-  conversationId Int
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  userId         Int
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// CRMIntegration speichert CRM-Daten.
-model CRMIntegration {
-  id       Int      @id @default(autoincrement())
-  platform String
-  apiKey   String
-  lastSync DateTime
-  userId   Int
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// Report speichert Vertriebsberichte.
-model Report {
+model Goal {
   id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  reportFile  String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
   userId      Int
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  target      Int
+  progress    Int      @default(0)
+  deadline    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-// Coaching speichert GPT-Feedback und Fortschritte.
-model Coaching {
-  id               Int      @id @default(autoincrement())
-  feedback         String // GPT-Feedback
-  improvementStage String // Fortschritt: z.B. "Stufe 1"
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  userId           Int
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// TrainingModule speichert Trainingsinhalte.
-model TrainingModule {
-  id              Int                  @id @default(autoincrement())
+model Training {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            String   // e.g., "Simulation", "LearningModule", "BestPractice"
   title           String
   description     String
-  difficultyLevel String // z.B. Anfänger
-  content         String // Link zu Videos/Dokumenten
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  completions     TrainingCompletion[]
+  difficultyLevel String
+  completedAt     DateTime?
+  score           Int?
+  feedback        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
-// TrainingCompletion speichert die Trainingsleistungen.
-model TrainingCompletion {
-  id          Int            @id @default(autoincrement())
-  score       Int // Punktzahl bei Tests
-  moduleId    Int
-  module      TrainingModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  userId      Int
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  completedAt DateTime       @default(now())
+model Performance {
+  id                Int      @id @default(autoincrement())
+  userId            Int
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date              DateTime
+  callCount         Int
+  averageCallDuration Int
+  achievedGoals     Int
+  gamificationPoints Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
-// RolePlaySimulation speichert KI-basierte Verkaufssimulationen.
-model RolePlaySimulation {
-  id           Int      @id @default(autoincrement())
-  scenarioType String // z.B. Einwände überwinden
-  feedback     String // Echtzeit-KI-Feedback
-  createdAt    DateTime @default(now())
-  userId       Int
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// Workflow speichert Verkaufsworkflows und Schritte.
-model Workflow {
+model CoachingSession {
   id          Int      @id @default(autoincrement())
-  name        String
-  description String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
   userId      Int
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  steps       Step[]
+  type        String   // e.g., "PersonalizedRecommendation", "ActionPlan", "Reflection"
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-model Step {
-  id         Int      @id @default(autoincrement())
-  title      String
-  details    String
-  completed  Boolean  @default(false)
-  workflowId Int
-  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+model CustomerNote {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerName String
+  notes       String
+  tags        String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Resource {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // e.g., "KnowledgeBase", "SalesMaterial", "ArgumentationAid"
+  title       String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CommunityPost {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  content     String
+  type        String   // e.g., "BestPractice", "Question", "ExpertArticle"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Setting {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key         String
+  value       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, key])
 }

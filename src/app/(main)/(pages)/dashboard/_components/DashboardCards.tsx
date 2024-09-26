@@ -1,17 +1,18 @@
 "use client";
 
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTheme } from 'next-themes';
 import { cn } from "@/lib/utils";
 
 const cardData = [
-  { title: 'Gesamtzahl der Gespräche', value: '124', progress: '20%', color: 'bg-indigo-400 dark:bg-indigo-600' },
-  { title: 'Abschlussquote', value: '32%', progress: '5%', color: 'bg-orange-400 dark:bg-orange-600' },
-  { title: 'Offene Follow-ups', value: '18', progress: '80%', color: 'bg-pink-400 dark:bg-pink-600' },
-  { title: 'Aktuelles Level', value: 'Senior Closer', progress: '75%', color: 'bg-green-400 dark:bg-green-600' },
+  { title: 'Heutige Termine', value: '3', progress: '60%', color: 'bg-blue-400 dark:bg-blue-600' },
+  { title: 'Abschlussquote', value: '75%', progress: '75%', color: 'bg-green-400 dark:bg-green-600' },
+  { title: 'Offene Follow-ups', value: '18', progress: '80%', color: 'bg-orange-400 dark:bg-orange-600' },
+  { title: 'Aktuelles Level', value: 'Senior Closer', progress: '80%', color: 'bg-purple-400 dark:bg-purple-600' },
 ];
 
-export function DashboardCards() {
+export default function DashboardCards() {
   const { theme } = useTheme();
 
   return (
