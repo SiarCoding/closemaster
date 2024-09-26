@@ -2,6 +2,7 @@
 
 import { NextResponse } from 'next/server';
 import axios from 'axios';
+import FormData from 'form-data'; // Installiere dies mit `npm install form-data` falls nötig
 
 export async function POST(request: Request) {
   try {
@@ -12,20 +13,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Keine Audiodatei gefunden." }, { status: 400 });
     }
 
-    // Erstelle FormData für den ASR-Server
-    const asrFormData = new FormData();
-    asrFormData.append('audio', audioFile, audioFile.name);
+    // Lese die Audiodatei als ArrayBuffer
+    const arrayBuffer = await audioFile.arrayBuffer();
+    const audioBytes = new Uint8Array(arrayBuffer);
 
-    // Sende die Audiodatei an den ASR-Server
-    const response = await axios.post('http://localhost:8000/transcribe', asrFormData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // Sende die Audiodatei an die Hugging Face Inference API
+    const response = await axios.post(
+      'https://api-inference.huggingface.co/models/openai/whisper-large-v3',
+      audioBytes,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
+          'Content-Type': 'application/octet-stream',
+        },
+      }
+    );
 
-    const text = response.data.text;
+    if (response.status !== 200) {
+      return NextResponse.json({ error: "Transkription fehlgeschlagen." }, { status: 500 });
+    }
 
-    return NextResponse.json({ text });
+    const data = response.data;
+
+    // Die Struktur der Antwort kann je nach Modell variieren
+    const transcription = data.text || "Transkription nicht verfügbar.";
+
+    return NextResponse.json({ text: transcription });
   } catch (error: any) {
-    console.error("Transkriptionsfehler:", error.message);
+    console.error("Transkriptionsfehler:", error.response?.data || error.message);
     return NextResponse.json({ error: "Fehler bei der Transkription." }, { status: 500 });
   }
 }
