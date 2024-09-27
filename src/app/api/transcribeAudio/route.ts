@@ -2,7 +2,6 @@
 
 import { NextResponse } from 'next/server';
 import axios from 'axios';
-import FormData from 'form-data'; // Installiere dies mit `npm install form-data` falls nötig
 
 export async function POST(request: Request) {
   try {
@@ -17,26 +16,23 @@ export async function POST(request: Request) {
     const arrayBuffer = await audioFile.arrayBuffer();
     const audioBytes = new Uint8Array(arrayBuffer);
 
-    // Sende die Audiodatei an die Hugging Face Inference API
-    const response = await axios.post(
-      'https://api-inference.huggingface.co/models/openai/whisper-large-v3',
+    // Sende die Audiodatei an die lokale ASR-Server-API
+    const asrResponse = await axios.post(
+      'http://localhost:8000/transcribe', // Stelle sicher, dass der ASR-Server läuft
       audioBytes,
       {
         headers: {
-          Authorization: `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
+          'Authorization': `Bearer ${process.env.ASR_API_KEY}`, // Falls benötigt
           'Content-Type': 'application/octet-stream',
         },
       }
     );
 
-    if (response.status !== 200) {
+    if (asrResponse.status !== 200) {
       return NextResponse.json({ error: "Transkription fehlgeschlagen." }, { status: 500 });
     }
 
-    const data = response.data;
-
-    // Die Struktur der Antwort kann je nach Modell variieren
-    const transcription = data.text || "Transkription nicht verfügbar.";
+    const transcription = asrResponse.data.text || "Transkription nicht verfügbar.";
 
     return NextResponse.json({ text: transcription });
   } catch (error: any) {
