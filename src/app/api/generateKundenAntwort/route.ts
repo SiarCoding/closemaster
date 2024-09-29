@@ -1,27 +1,39 @@
 // src/app/api/generateKundenAntwort/route.ts
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
+import { levels } from '@/app/(main)/(pages)/trainingsbereich/levelsData';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { nachricht, szenario, level } = body;
+    const { nachricht, szenarioId, level } = await request.json();
 
-    if (!nachricht || !szenario || level === undefined) {
-      return NextResponse.json({ error: "Nachricht, Szenario und Level sind erforderlich." }, { status: 400 });
+    if (szenarioId === undefined || level === undefined) {
+      return NextResponse.json(
+        { error: 'Szenario-ID und Level sind erforderlich.' },
+        { status: 400 }
+      );
     }
 
-    // Erstellen des Prompts für AI21
+    const levelData = levels.find((lvl) => lvl.level === level);
+    const szenario = levelData?.szenarien.find((sz) => sz.id === szenarioId);
+
+    if (!szenario) {
+      return NextResponse.json(
+        { error: 'Ungültiges Szenario.' },
+        { status: 400 }
+      );
+    }
+
+    const sellerMessage = nachricht ? `Verkäufer: ${nachricht}\n` : '';
+
     const prompt = `
-Du bist ein virtueller Kunde in einem Verkaufstraining auf Level ${level}. Deine Aufgabe ist es, auf die Antworten des Verkäufers zu reagieren. Wenn der Verkäufer überzeugend ist, zeige Interesse am Kauf. Wenn nicht, äußere Bedenken oder stelle weitere Fragen.
+Du bist ein virtueller Kunde in einem Verkaufstraining auf Level ${level}. Dein Szenario ist: "${szenario.beschreibung}". Deine Aufgabe ist es, ein Verkaufsgespräch mit dem Verkäufer zu führen und auf seine Antworten zu reagieren. Wenn der Verkäufer überzeugend ist, zeige Interesse am Kauf. Wenn nicht, äußere Bedenken oder stelle weitere Fragen.
 
 Verkaufsdialog:
-Verkäufer: ${nachricht}
-Deine Antwort als Kunde:
+${sellerMessage}Deine Antwort als Kunde:
 `;
 
-    // Aufruf der AI21 API zur Generierung der Kundenantwort
     const response = await axios.post(
       'https://api.ai21.com/studio/v1/j2-ultra/complete',
       {
@@ -29,7 +41,7 @@ Deine Antwort als Kunde:
         maxTokens: 150,
         temperature: 0.7,
         topP: 1,
-        stopSequences: ["\n"],
+        stopSequences: ['\n'],
       },
       {
         headers: {
@@ -40,15 +52,23 @@ Deine Antwort als Kunde:
     );
 
     if (response.status !== 200) {
-      console.error("AI21 API Antwort:", response.data);
-      return NextResponse.json({ error: "Antwortgenerierung fehlgeschlagen.", details: response.data }, { status: 500 });
+      console.error('AI21 API Antwort:', response.data);
+      return NextResponse.json(
+        { error: 'Antwortgenerierung fehlgeschlagen.', details: response.data },
+        { status: 500 }
+      );
     }
 
-    const kundenAntwort = response.data.completions[0]?.data.text.trim() || "Entschuldigung, ich konnte keine passende Antwort generieren.";
+    const kundenAntwort =
+      response.data.completions[0]?.data.text.trim() ||
+      'Entschuldigung, ich konnte keine passende Antwort generieren.';
 
     return NextResponse.json({ antwort: kundenAntwort });
   } catch (error: any) {
-    console.error("Fehler bei der Antwortgenerierung:", error.message);
-    return NextResponse.json({ error: "Fehler bei der Generierung der Antwort.", details: error.message }, { status: 500 });
+    console.error('Fehler bei der Antwortgenerierung:', error.message);
+    return NextResponse.json(
+      { error: 'Fehler bei der Generierung der Antwort.', details: error.message },
+      { status: 500 }
+    );
   }
 }

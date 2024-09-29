@@ -12,31 +12,47 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Keine Audiodatei gefunden." }, { status: 400 });
     }
 
-    // Lese die Audiodatei als ArrayBuffer
+    // Lesen der Audiodatei als Buffer
     const arrayBuffer = await audioFile.arrayBuffer();
-    const audioBytes = new Uint8Array(arrayBuffer);
+    const audioBuffer = Buffer.from(arrayBuffer);
 
-    // Sende die Audiodatei an die lokale ASR-Server-API
-    const asrResponse = await axios.post(
-      'http://localhost:8000/transcribe', // Stelle sicher, dass der ASR-Server läuft
-      audioBytes,
+    // Logging für Debugging
+    console.log('Audio file type:', audioFile.type);
+    console.log('Audio file size:', audioBuffer.length);
+
+    // Prüfe, ob die Audiodatei Daten enthält
+    if (audioBuffer.length === 0) {
+      console.error('Die Audiodatei ist leer.');
+      return NextResponse.json({ error: "Die Audiodatei ist leer." }, { status: 400 });
+    }
+
+    // Senden der Audiodaten an Deepgram
+    const response = await axios.post(
+      'https://api.deepgram.com/v1/listen',
+      audioBuffer,
       {
         headers: {
-          'Authorization': `Bearer ${process.env.ASR_API_KEY}`, // Falls benötigt
+          'Authorization': `Token ${process.env.DEEPGRAM_API_KEY}`,
           'Content-Type': 'application/octet-stream',
+        },
+        params: {
+          language: 'de',
+          punctuate: true,
+          model: 'general',
         },
       }
     );
 
-    if (asrResponse.status !== 200) {
+    if (response.status !== 200 && response.status !== 201) {
+      console.error('Deepgram API Fehler:', response.data);
       return NextResponse.json({ error: "Transkription fehlgeschlagen." }, { status: 500 });
     }
 
-    const transcription = asrResponse.data.text || "Transkription nicht verfügbar.";
+    const transcription = response.data.results.channels[0].alternatives[0].transcript || "Transkription nicht verfügbar.";
 
-    return NextResponse.json({ text: transcription });
+    return NextResponse.json({ transcription });
   } catch (error: any) {
     console.error("Transkriptionsfehler:", error.response?.data || error.message);
-    return NextResponse.json({ error: "Fehler bei der Transkription." }, { status: 500 });
+    return NextResponse.json({ error: "Fehler bei der Transkription.", details: error.response?.data || error.message }, { status: 500 });
   }
 }
