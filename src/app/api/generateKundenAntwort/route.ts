@@ -1,74 +1,66 @@
-// src/app/api/generateKundenAntwort/route.ts
-
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import axios from 'axios';
-import { levels } from '@/app/(main)/(pages)/trainingsbereich/levelsData';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { nachricht, szenarioId, level } = await request.json();
+    const body = await request.json();
+    const { nachricht, szenarioId, level, userData } = body;
 
-    if (szenarioId === undefined || level === undefined) {
-      return NextResponse.json(
-        { error: 'Szenario-ID und Level sind erforderlich.' },
-        { status: 400 }
-      );
+    if (!nachricht || nachricht.trim() === '') {
+      return NextResponse.json({ error: 'Die Nachricht darf nicht leer sein.' }, { status: 400 });
     }
 
-    const levelData = levels.find((lvl) => lvl.level === level);
-    const szenario = levelData?.szenarien.find((sz) => sz.id === szenarioId);
-
-    if (!szenario) {
-      return NextResponse.json(
-        { error: 'Ungültiges Szenario.' },
-        { status: 400 }
-      );
-    }
-
-    const sellerMessage = nachricht ? `Verkäufer: ${nachricht}\n` : '';
-
-    const prompt = `
-Du bist ein virtueller Kunde in einem Verkaufstraining auf Level ${level}. Dein Szenario ist: "${szenario.beschreibung}". Deine Aufgabe ist es, ein Verkaufsgespräch mit dem Verkäufer zu führen und auf seine Antworten zu reagieren. Wenn der Verkäufer überzeugend ist, zeige Interesse am Kauf. Wenn nicht, äußere Bedenken oder stelle weitere Fragen.
-
-Verkaufsdialog:
-${sellerMessage}Deine Antwort als Kunde:
-`;
-
-    const response = await axios.post(
-      'https://api.ai21.com/studio/v1/j2-ultra/complete',
-      {
-        prompt: prompt,
-        maxTokens: 150,
-        temperature: 0.7,
-        topP: 1,
-        stopSequences: ['\n'],
-      },
+    // Wit.ai API-Aufruf
+    const witResponse = await axios.get(
+      `https://api.wit.ai/message?v=20240930&q=${encodeURIComponent(nachricht)}`,
       {
         headers: {
-          Authorization: `Bearer ${process.env.AI21_API_KEY}`,
+          Authorization: `Bearer ${process.env.WIT_ACCESS_TOKEN}`,
           'Content-Type': 'application/json',
         },
       }
     );
 
-    if (response.status !== 200) {
-      console.error('AI21 API Antwort:', response.data);
-      return NextResponse.json(
-        { error: 'Antwortgenerierung fehlgeschlagen.', details: response.data },
-        { status: 500 }
-      );
-    }
+    const intent = witResponse.data.intents[0]?.name;
+    const entities = witResponse.data.entities;
 
-    const kundenAntwort =
-      response.data.completions[0]?.data.text.trim() ||
-      'Entschuldigung, ich konnte keine passende Antwort generieren.';
+    // Logik zur Generierung der Antwort basierend auf Intent, Entities und userData
+    let antwort = generateAntwort(intent, entities, userData, level, szenarioId);
 
-    return NextResponse.json({ antwort: kundenAntwort });
-  } catch (error: any) {
-    console.error('Fehler bei der Antwortgenerierung:', error.message);
-    return NextResponse.json(
-      { error: 'Fehler bei der Generierung der Antwort.', details: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ antwort });
+  } catch (error) {
+    // Fehlerbehandlung wie zuvor
+    const err = error as Error | { response?: { data?: unknown; status?: number } };
+    
+    console.error('Fehler bei der Kommunikation mit Wit.ai:', 
+      'response' in err ? err.response?.data : err instanceof Error ? err.message : 'Unknown error');
+
+    return NextResponse.json({ error: 'Interner Serverfehler bei der Kommunikation mit Wit.ai' }, { status: 500 });
+  }
+}
+
+function generateAntwort(intent: string, entities: any, userData: any, level: number, szenarioId: string): string {
+  // Implementiere hier eine komplexere Logik zur Generierung der Antwort
+  // Berücksichtige dabei intent, entities, userData, level und szenarioId
+
+  switch(intent) {
+    case 'greeting_with_interest':
+      return `Guten Tag ${userData.nachname ? `Herr/Frau ${userData.nachname}` : ''}, 
+              danke für Ihr Interesse an ${userData.product_name}. 
+              Was möchten Sie speziell darüber wissen?`;
+    case 'product_questions':
+      return `Das ${userData.product_name} hat folgende Eigenschaften: ${userData.features.join(', ')}. 
+              Welche Funktion interessiert Sie am meisten?`;
+    case 'ask_price':
+      return `Der Preis für ${userData.product_name} beträgt ${userData.price}. 
+              Wie passt das in Ihr Budget?`;
+    case 'raise_objections':
+      // Hier könntest du spezifische Einwände basierend auf dem Level oder Szenario behandeln
+      return `Ich verstehe Ihre Bedenken. Lassen Sie uns darüber sprechen, wie ${userData.product_name} 
+              trotzdem einen Mehrwert für Sie bieten kann.`;
+    // ... Weitere Fälle für andere Intents
+    default:
+      return `Entschuldigung, ich habe Ihre Frage nicht ganz verstanden. 
+              Können Sie das bitte anders formulieren?`;
   }
 }

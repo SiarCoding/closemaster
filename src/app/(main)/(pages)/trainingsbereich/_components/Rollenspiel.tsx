@@ -14,17 +14,38 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import axios from 'axios';
 import FeedbackModal from './FeedbackModal';
+
+interface RollenspielProps {
+  initialLevel: number;
+  onLevelChange: (level: number) => void;
+}
 
 interface Nachricht {
   sender: 'benutzer' | 'kunde' | 'system';
   inhalt: string;
 }
 
-interface RollenspielProps {
-  initialLevel: number;
-  onLevelChange: (level: number) => void;
+interface UserData {
+  nachname: string;
+  product_name: string;
+  price: string;
+  features: string[];
+  competitor_product?: string;
+  quantity?: number;
+  custom_data?: string;
 }
 
 export function Rollenspiel({ initialLevel, onLevelChange }: RollenspielProps) {
@@ -44,6 +65,10 @@ export function Rollenspiel({ initialLevel, onLevelChange }: RollenspielProps) {
   const [feedback, setFeedback] = useState<string>('');
   const [isLevelStarted, setIsLevelStarted] = useState(false);
 
+  // Neue State-Variable für die Nutzerdaten
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [showUserDataForm, setShowUserDataForm] = useState(false);
+
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -58,7 +83,7 @@ export function Rollenspiel({ initialLevel, onLevelChange }: RollenspielProps) {
   }, [nachrichten, scrollToBottom]);
 
   useEffect(() => {
-    if (isLevelStarted && showIntro && currentLevel) {
+    if (isLevelStarted && showIntro && currentLevel && userData) {
       const introText = `Willkommen zum Rollenspiel! Du befindest dich auf Level ${currentLevel.level}: ${currentLevel.name}. Heute lernst du: ${currentLevel.ziel.join(
         ', '
       )}.`;
@@ -73,7 +98,7 @@ export function Rollenspiel({ initialLevel, onLevelChange }: RollenspielProps) {
         sendKundenNachricht();
       });
     }
-  }, [isLevelStarted, showIntro, currentLevel]);
+  }, [isLevelStarted, showIntro, currentLevel, userData]);
 
   const handleTextToSpeech = (text: string) => {
     return new Promise<void>((resolve, reject) => {
@@ -139,6 +164,8 @@ export function Rollenspiel({ initialLevel, onLevelChange }: RollenspielProps) {
       const evaluationResponse = await axios.post('/api/evaluateAntwort', {
         nachricht: transcription,
         level: currentLevel?.level,
+        userData,
+        conversationHistory,
       });
 
       const { score, justification } = evaluationResponse.data;
@@ -171,21 +198,33 @@ export function Rollenspiel({ initialLevel, onLevelChange }: RollenspielProps) {
     }
   };
 
+  // Füge in der Funktion sendKundenNachricht die Anpassungen hinzu
+
   const sendKundenNachricht = async (benutzerNachricht?: string) => {
     try {
-      const response = await axios.post('/api/generateKundenAntwort', {
-        nachricht: benutzerNachricht || '',
-        szenarioId: currentSzenario?.id,
-        level: currentLevel?.level,
-      });
-
-      const kundenAntwort = response.data.antwort;
-      const kundenNachricht: Nachricht = { sender: 'kunde', inhalt: kundenAntwort };
+      let kundenNachrichtText = '';
+  
+      if (!benutzerNachricht) {
+        // Erste Nachricht des virtuellen Kunden (Kunde begrüßt den Verkäufer)
+        kundenNachrichtText = `Guten Tag, ich interessiere mich für Ihr Produkt ${userData?.product_name}.`;
+      } else {
+        // Nachricht des virtuellen Kunden basierend auf der Verkäuferantwort
+        const response = await axios.post('/api/generateKundenAntwort', {
+          nachricht: benutzerNachricht,
+          szenarioId: currentSzenario?.id,
+          level: currentLevel?.level,
+          userData,
+        });
+  
+        kundenNachrichtText = response.data.antwort;
+      }
+  
+      const kundenNachricht: Nachricht = { sender: 'kunde', inhalt: kundenNachrichtText };
       setNachrichten((prev) => [...prev, kundenNachricht]);
       setConversationHistory((prev) => [...prev, kundenNachricht]);
-
-      await handleTextToSpeech(kundenAntwort);
-
+  
+      await handleTextToSpeech(kundenNachrichtText);
+  
       // Nach dem Abspielen der Kundenantwort Spracherkennung starten
       handleSpeechRecognition();
     } catch (error) {
@@ -199,6 +238,7 @@ export function Rollenspiel({ initialLevel, onLevelChange }: RollenspielProps) {
         conversationHistory,
         level: currentLevel?.level,
         szenarioId: currentSzenario?.id,
+        userData,
       });
 
       const feedbackText = response.data.feedback;
@@ -211,28 +251,139 @@ export function Rollenspiel({ initialLevel, onLevelChange }: RollenspielProps) {
     }
   };
 
+  const handleStartLevel = () => {
+    setShowUserDataForm(true);
+  };
+
+  const handleUserDataSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+
+    const data: UserData = {
+      nachname: formData.get('nachname') as string,
+      product_name: formData.get('product_name') as string,
+      price: formData.get('price') as string,
+      features: (formData.get('features') as string).split(',').map((f) => f.trim()),
+      competitor_product: formData.get('competitor_product') as string,
+      quantity: parseInt(formData.get('quantity') as string) || undefined,
+      custom_data: formData.get('custom_data') as string,
+    };
+
+    setUserData(data);
+    setIsLevelStarted(true);
+    setShowUserDataForm(false);
+  };
+
   return (
-    <Card className="w-full max-w-3xl mx-auto">
+    <Card className="w-full max-w-4xl mx-auto bg-gradient-to-br from-orange-50 to-green-50 shadow-lg">
       {!isLevelStarted ? (
         <div className="flex flex-col items-center justify-center h-full p-8">
-          <h2 className="text-2xl font-bold mb-4">Willkommen zum Rollenspiel</h2>
-          <p className="mb-6">
-            Klicke auf den Button, um Level {currentLevel?.level} zu starten.
+          <h2 className="text-3xl font-bold mb-4 text-blue-600">Willkommen zum Rollenspiel</h2>
+          <p className="mb-6 text-gray-600">
+            Bereit für Level {currentLevel?.level}? Starte jetzt und verbessere deine Verkaufsfähigkeiten!
           </p>
-          <Button onClick={() => setIsLevelStarted(true)}>
+          <Button
+            onClick={handleStartLevel}
+            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full transition-all duration-300 ease-in-out transform hover:scale-105"
+          >
             Level {currentLevel?.level} starten
           </Button>
+
+          {showUserDataForm && (
+            <form onSubmit={handleUserDataSubmit} className="mt-6 w-full max-w-md">
+              <h3 className="text-xl font-semibold mb-4 text-gray-700">Bitte fülle die folgenden Felder aus:</h3>
+              <div className="mb-4">
+                <label className="block text-gray-700">Dein Nachname:</label>
+                <input
+                  name="nachname"
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700">Produktname:</label>
+                <input
+                  name="product_name"
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700">Preis:</label>
+                <input
+                  name="price"
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700">Funktionen (kommagetrennt):</label>
+                <input
+                  name="features"
+                  type="text"
+                  required
+                  placeholder="z.B. Hohe Leistung, Benutzerfreundlich"
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              {/* Optionale Felder */}
+              <div className="mb-4">
+                <label className="block text-gray-700">Wettbewerberprodukt (optional):</label>
+                <input
+                  name="competitor_product"
+                  type="text"
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700">Menge (optional):</label>
+                <input
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700">Weitere Informationen (optional):</label>
+                <textarea
+                  name="custom_data"
+                  className="w-full px-3 py-2 border rounded"
+                ></textarea>
+              </div>
+              <Button
+                type="submit"
+                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full"
+              >
+                Rollenspiel starten
+              </Button>
+            </form>
+          )}
         </div>
       ) : (
         <>
-          <CardHeader>
-            <CardTitle>
+          <CardHeader className="bg-gradient-to-r from-blue-400 to-blue-500 text-white rounded-t-lg">
+            <CardTitle className="text-2xl">
               Rollenspiel - Level {currentLevel?.level}: {currentLevel?.name}
             </CardTitle>
-            <CardDescription>{currentSzenario?.beschreibung}</CardDescription>
+            <CardDescription className="text-orange-100">{currentSzenario?.beschreibung}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[400px] w-full pr-4" ref={scrollViewportRef}>
+          <CardContent className="p-6">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold mb-2 text-gray-700">Ziele:</h3>
+              <div className="flex flex-wrap gap-2">
+                {currentLevel?.ziel.map((ziel, index) => (
+                  <Badge key={index} variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                    {ziel}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <ScrollArea className="h-[400px] w-full pr-4 border rounded-lg bg-white" ref={scrollViewportRef}>
               {nachrichten.map((nachricht, index) => (
                 <div
                   key={index}
@@ -241,11 +392,11 @@ export function Rollenspiel({ initialLevel, onLevelChange }: RollenspielProps) {
                   } mb-4`}
                 >
                   <div
-                    className={`flex items-start ${
+                    className={`flex items-start max-w-[70%] ${
                       nachricht.sender === 'benutzer' ? 'flex-row-reverse' : ''
                     }`}
                   >
-                    <Avatar className="w-10 h-10">
+                    <Avatar className="w-10 h-10 border-2 border-white shadow-md">
                       <AvatarImage
                         src={
                           nachricht.sender === 'kunde'
@@ -264,11 +415,11 @@ export function Rollenspiel({ initialLevel, onLevelChange }: RollenspielProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div
-                      className={`mx-2 p-3 rounded-lg ${
+                      className={`mx-2 p-3 rounded-lg shadow-md ${
                         nachricht.sender === 'benutzer'
                           ? 'bg-blue-500 text-white'
                           : nachricht.sender === 'kunde'
-                          ? 'bg-gray-200'
+                          ? 'bg-gray-100'
                           : 'bg-green-100'
                       }`}
                     >
@@ -279,22 +430,55 @@ export function Rollenspiel({ initialLevel, onLevelChange }: RollenspielProps) {
               ))}
             </ScrollArea>
           </CardContent>
-          <CardFooter className="flex flex-col items-stretch">
+          <CardFooter className="flex flex-col items-stretch bg-gray-50 rounded-b-lg">
             <div className="mb-4 w-full">
-              <Progress value={fortschritt} className="w-full" />
-              <span className="text-sm text-gray-600">
-                Fortschritt: {fortschritt.toFixed(0)}%
-              </span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Progress
+                        value={fortschritt}
+                        className="w-full h-3 bg-blue-200 [&>div]:bg-blue-500"
+                      />
+                      <span className="text-sm text-gray-600 mt-1 block">
+                        Fortschritt: {fortschritt.toFixed(0)}%
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Dein aktueller Fortschritt im Rollenspiel</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             {!isProcessing && fortschritt < 100 && (
               <div className="flex justify-center w-full mb-4">
                 {isRecording ? (
-                  <p>Bitte sprechen Sie Ihre Antwort...</p>
+                  <p className="text-blue-600 animate-pulse">Bitte sprechen Sie Ihre Antwort...</p>
                 ) : (
-                  <p>Warten auf die Antwort des Kunden...</p>
+                  <p className="text-gray-600">Warten auf die Antwort des Kunden...</p>
                 )}
               </div>
             )}
+            <div className="mt-4">
+              <h3 className="text-lg font-semibold mb-2 text-gray-700">Leistungsübersicht:</h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart
+                  data={[
+                    { name: 'Kommunikation', wert: 75 },
+                    { name: 'Produktwissen', wert: 85 },
+                    { name: 'Überzeugungskraft', wert: 60 },
+                    { name: 'Abschlussfähigkeit', wert: 70 },
+                  ]}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <RechartsTooltip />
+                  <Bar dataKey="wert" fill="#f97316" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </CardFooter>
 
           {/* Feedback Modal */}

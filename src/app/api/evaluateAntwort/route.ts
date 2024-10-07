@@ -6,7 +6,7 @@ import { levels } from '@/app/(main)/(pages)/trainingsbereich/levelsData';
 
 export async function POST(request: NextRequest) {
   try {
-    const { nachricht, level } = await request.json();
+    const { nachricht, level, userData, conversationHistory } = await request.json();
 
     if (!nachricht || level === undefined) {
       return NextResponse.json(
@@ -19,11 +19,25 @@ export async function POST(request: NextRequest) {
     const levelGoals = levelData?.ziel.join(', ') || '';
     const levelTechniques = levelData?.techniken.join(', ') || '';
 
-    const prompt = `
-Du bist ein erfahrener Verkaufstrainer. Analysiere die folgende Antwort eines Verkäufers auf Level ${level}. Die Lernziele dieses Levels sind: ${levelGoals}. Die wichtigen Techniken sind: ${levelTechniques}. Bewerte die Antwort des Verkäufers auf einer Skala von 1 bis 10 und gib eine kurze Begründung für die Bewertung.
+    const formattedConversation = conversationHistory
+      .map((message: any) => {
+        const sender = message.sender === 'benutzer' ? 'Verkäufer' : 'Kunde';
+        return `${sender}: ${message.inhalt}`;
+      })
+      .join('\n');
 
-Antwort des Verkäufers:
+    const prompt = `
+Du bist ein erfahrener Verkaufstrainer. Analysiere die folgende Antwort eines Verkäufers auf Level ${level}. Die Lernziele dieses Levels sind: ${levelGoals}. Die wichtigen Techniken sind: ${levelTechniques}. Der Verkäufer verkauft das Produkt "${userData.product_name}" mit den Funktionen: ${userData.features.join(
+      ', '
+    )}. Berücksichtige das vorherige Gespräch in deiner Analyse.
+
+Vorheriges Gespräch:
+${formattedConversation}
+
+Aktuelle Antwort des Verkäufers:
 "${nachricht}"
+
+Bewerte die Antwort des Verkäufers auf einer Skala von 1 bis 10 und gib eine kurze Begründung für die Bewertung.
 
 Bewertung (1-10):
 Begründung:
@@ -33,7 +47,7 @@ Begründung:
       'https://api.ai21.com/studio/v1/j2-ultra/complete',
       {
         prompt: prompt,
-        maxTokens: 100,
+        maxTokens: 80,
         temperature: 0.7,
         topP: 1,
         stopSequences: ['###'],
