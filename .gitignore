@@ -38,3 +38,51 @@ yarn-error.log*
 next-env.d.ts
 
 certificates
+
+# Ignore Rasa environment and other Python environments
+asr_env/
+venv/
+env/
+__pycache__/
+
+# Ignore large library files
+*.dylib
+*.pkl
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+logs
+*.log
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore macOS system files
+.DS_Store
+
+# Ignore IDE-specific files
+.vscode/
+.idea/
+
+# Ignore Next.js build files
+.next/
+out/
+
+# Ignore build directories
+build/
+dist/
+tmp/
+temp/
+
+# Ignore other large binaries
+*.tar
+*.zip
+*.gz
+*.rar
+
+# Ignore Git LFS tracked files if you're not using LFS
+*.lfs
