@@ -12,6 +12,7 @@ model User {
   clerkId           String             @unique
   name              String?
   email             String             @unique
+  company           String?            // Add this line
   profileImage      String?
   tier              String             @default("Free")
   createdAt         DateTime           @default(now())
