@@ -25,9 +25,8 @@ export default function RootLayout({
           className={font.className}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
+          defaultTheme="light"
+          enableSystem={false}
         >
           {children}
         </ThemeProvider>

@@ -42,57 +42,39 @@ export default function Dashboard() {
   if (!mounted) return null;
 
   return (
-    <div
-      className={cn(
-        'flex-1 overflow-y-auto',
-        theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'
-      )}
-    >
-      <div
-        className={cn(
-          'max-w-7xl mx-auto p-6 space-y-6',
-          theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
-        )}
-      >
-        {/* Begrüßungsnachricht mit abgerundeter Ecke */}
-        <div className="mb-8 bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-lg shadow-lg">
+    <div className={cn('flex-1 overflow-y-auto p-6', theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100')}>
+      <div className={cn('max-w-7xl mx-auto space-y-8', theme === 'dark' ? 'text-gray-100' : 'text-gray-800')}>
+        {/* Begrüßungsnachricht */}
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-lg shadow-lg">
           <h1 className="text-3xl font-extrabold mb-2 text-white">Willkommen zurück, {userName}!</h1>
           <p className="text-xl text-white">{message}</p>
         </div>
 
-        {/* Dashboard-Karten mit KPIs */}
+        {/* KPI-Karten */}
         <DashboardCards />
 
         {/* Hauptinhalt */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Linke Spalte */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             <ProgressIndicators />
             <TasksAppointments />
+            <TrainingProgress />
           </div>
 
           {/* Mittlere Spalte */}
-          <div className="space-y-6">
-            <TrainingProgress />
+          <div className="space-y-8">
             <CoachingOverview />
             <Recommendations />
+            <RealTimeFeedback />
           </div>
 
           {/* Rechte Spalte */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             <GamificationChallenges />
             <Leaderboard />
+            <UpgradePlan />
           </div>
-        </div>
-
-        {/* Echtzeit-Feedback */}
-        <div className="mt-6">
-          <RealTimeFeedback />
-        </div>
-
-        {/* Upgrade-Plan */}
-        <div className="mt-6">
-          <UpgradePlan />
         </div>
       </div>
     </div>

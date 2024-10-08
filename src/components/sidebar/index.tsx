@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from "next-themes";
 import { Switch } from "@/components/ui/switch";
+import React, { useEffect, useState } from 'react';
 
 const navItems = [
   { icon: Home, label: 'Dashboard', href: '/dashboard' },
@@ -21,18 +22,21 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
-    <aside className={cn(
-      "w-64 p-6 flex flex-col justify-between h-screen",
-      theme === "dark" ? "bg-gray-800 text-white" : "bg-blue-600 text-white"
-    )}>
+    <aside className="w-64 p-6 flex flex-col justify-between h-screen bg-blue-600 dark:bg-gray-800 text-white">
       <div>
         <div className="mb-8">
-          <div className={cn(
-            "w-full h-12 rounded-lg flex items-center justify-center font-bold",
-            theme === "dark" ? "bg-gray-700 text-white" : "bg-white text-blue-600"
-          )}>
+          <div className="w-full h-12 rounded-lg flex items-center justify-center font-bold bg-white dark:bg-gray-700 text-blue-600 dark:text-white">
             CLOSEMASTER
           </div>
         </div>
@@ -44,8 +48,8 @@ export function Sidebar() {
               className={cn(
                 "flex items-center w-full p-2 text-left space-x-3 rounded-lg transition-colors",
                 pathname === item.href
-                  ? theme === "dark" ? "bg-gray-700 text-white" : "bg-blue-500 text-white"
-                  : theme === "dark" ? "hover:bg-gray-700 hover:text-white" : "hover:bg-blue-500 hover:text-white"
+                  ? "bg-blue-500 dark:bg-gray-700 text-white"
+                  : "hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700"
               )}
             >
               <item.icon size={20} />
