@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import {
   Tooltip,
   TooltipContent,
@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getKpiData } from '@/app/(main)/(pages)/dashboard/_actions/dashboardActions';
+import { useRouter } from 'next/navigation';
 
 interface UserData {
   salesTarget: number;
@@ -33,10 +34,12 @@ interface UserData {
 
 export function Infobar() {
   const { theme } = useTheme();
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState("Company Name Not Set");
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -54,6 +57,19 @@ export function Infobar() {
     fetchUserData();
   }, []);
 
+  useEffect(() => {
+    const updateCompanyName = async () => {
+      if (isLoaded && user) {
+        await user.reload();
+        const name = user.publicMetadata.company;
+        setCompanyName(name ? String(name) : "Company Name Not Set");
+        console.log("Updated company name:", name);
+      }
+    };
+
+    updateCompanyName();
+  }, [isLoaded, user]);
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -62,9 +78,9 @@ export function Infobar() {
     return <div>Error: {error}</div>;
   }
 
-  const companyName = typeof user?.publicMetadata.companyName === 'string' 
-    ? user.publicMetadata.companyName 
-    : "Company Name Not Set";
+  const handleEditUserData = () => {
+    router.push('/edit-user-data');
+  };
 
   return (
     <header className={cn(
@@ -175,7 +191,10 @@ export function Infobar() {
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className={theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-100"}>
+              <DropdownMenuItem 
+                onClick={handleEditUserData}
+                className={theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-100"}
+              >
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Edit User Data</span>
               </DropdownMenuItem>

@@ -12,9 +12,12 @@ model User {
   clerkId           String             @unique
   name              String?
   email             String             @unique
-  company           String?            // Add this line
+  company           String?
   profileImage      String?
   tier              String             @default("Free")
+  product           String?
+  productDescription String?
+  industry          String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   credits           Int                @default(10)
@@ -34,6 +37,7 @@ model User {
   subscriptions     Subscription?
   tasks             Task[]
   trainings         Training[]
+  tickets           Ticket[]
 }
 
 model Kpi {
@@ -201,4 +205,20 @@ model Achievement {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Ticket {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String
+  company   String
+  industry  String
+  product   String
+  productDescription String
+  behavior  String
+  status    String
+  createdAt DateTime @default(now())
+  terminationProbability Int
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

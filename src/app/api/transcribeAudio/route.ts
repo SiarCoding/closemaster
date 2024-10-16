@@ -1,5 +1,3 @@
-// src/app/api/transcribeAudio/route.ts
-
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 
@@ -12,21 +10,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Keine Audiodatei gefunden." }, { status: 400 });
     }
 
-    // Lesen der Audiodatei als Buffer
     const arrayBuffer = await audioFile.arrayBuffer();
     const audioBuffer = Buffer.from(arrayBuffer);
 
-    // Logging für Debugging
     console.log('Audio file type:', audioFile.type);
     console.log('Audio file size:', audioBuffer.length);
 
-    // Prüfe, ob die Audiodatei Daten enthält
     if (audioBuffer.length === 0) {
       console.error('Die Audiodatei ist leer.');
       return NextResponse.json({ error: "Die Audiodatei ist leer." }, { status: 400 });
     }
 
-    // Senden der Audiodaten an Deepgram
     const response = await axios.post(
       'https://api.deepgram.com/v1/listen',
       audioBuffer,

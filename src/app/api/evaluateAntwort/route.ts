@@ -1,91 +1,103 @@
-// src/app/api/evaluateAntwort/route.ts
+// app/api/evaluateAntwort/route.ts
 
-import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
-import { levels } from '@/app/(main)/(pages)/trainingsbereich/levelsData';
+import { NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { auth } from '@clerk/nextjs/server';
+import { db } from '@/lib/db';
+import { getCustomerBehaviorProfile, CustomerBehaviorProfile } from '@/lib/ColdCallingRules';
+import salesTechniques from '@/lib/SalesTechniques';
 
-export async function POST(request: NextRequest) {
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
+
+export async function POST(request: Request) {
   try {
-    const { nachricht, level, userData, conversationHistory } = await request.json();
-
-    if (!nachricht || level === undefined) {
-      return NextResponse.json(
-        { error: 'Nachricht und Level sind erforderlich.' },
-        { status: 400 }
-      );
+    const { userId } = auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const levelData = levels.find((lvl) => lvl.level === level);
-    const levelGoals = levelData?.ziel.join(', ') || '';
-    const levelTechniques = levelData?.techniken.join(', ') || '';
+    const user = await db.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true, product: true, productDescription: true, industry: true },
+    });
 
-    const formattedConversation = conversationHistory
-      .map((message: any) => {
-        const sender = message.sender === 'benutzer' ? 'Verkäufer' : 'Kunde';
-        return `${sender}: ${message.inhalt}`;
-      })
-      .join('\n');
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
-    const prompt = `
-Du bist ein erfahrener Verkaufstrainer. Analysiere die folgende Antwort eines Verkäufers auf Level ${level}. Die Lernziele dieses Levels sind: ${levelGoals}. Die wichtigen Techniken sind: ${levelTechniques}. Der Verkäufer verkauft das Produkt "${userData.product_name}" mit den Funktionen: ${userData.features.join(
-      ', '
-    )}. Berücksichtige das vorherige Gespräch in deiner Analyse.
+    const { userMessage, conversationHistory, ticketData } = await request.json();
 
-Vorheriges Gespräch:
-${formattedConversation}
-
-Aktuelle Antwort des Verkäufers:
-"${nachricht}"
-
-Bewerte die Antwort des Verkäufers auf einer Skala von 1 bis 10 und gib eine kurze Begründung für die Bewertung.
-
-Bewertung (1-10):
-Begründung:
-`;
-
-    const response = await axios.post(
-      'https://api.ai21.com/studio/v1/j2-ultra/complete',
-      {
-        prompt: prompt,
-        maxTokens: 80,
-        temperature: 0.7,
-        topP: 1,
-        stopSequences: ['###'],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.AI21_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      }
+    // Get the customer behavior profile based on termination probability
+    const customerProfile: CustomerBehaviorProfile = getCustomerBehaviorProfile(
+      ticketData.terminationProbability
     );
 
-    if (response.status !== 200) {
-      console.error('AI21 API Antwort:', response.data);
-      return NextResponse.json(
-        { error: 'Bewertung fehlgeschlagen.', details: response.data },
-        { status: 500 }
-      );
+    // Get preferred sales techniques
+    const preferredTechniques = salesTechniques.filter((technique) =>
+      customerProfile.preferredSalesTechniques.includes(technique.name)
+    );
+
+    let prompt = `
+Du bist ein erfahrener Verkaufstrainer. Deine Aufgabe ist es, die letzte Nachricht des Verkäufers zu bewerten.
+
+**Produkt des Verkäufers:** ${user.product}
+**Produktbeschreibung:** ${user.productDescription}
+
+**Kundenprofil:**
+- **Name:** ${ticketData.name}
+- **Verhaltensbeschreibung:** ${customerProfile.behaviorDescription}
+- **Bevorzugte Verkaufstechniken:** ${customerProfile.preferredSalesTechniques.join(', ')}
+
+**Gesprächsverlauf:**
+${conversationHistory.slice(-5).join('\n')}
+
+**Verkäufer:** ${userMessage}
+
+**Anweisungen:**
+
+- Analysiere die letzte Nachricht des Verkäufers.
+- Bestimme, ob er eine der bevorzugten Verkaufstechniken angewendet hat.
+- Bewerte die Wirksamkeit seiner Antwort auf einer Skala von 1 bis 10 (10 ist hervorragend).
+- Gib ein kurzes, konstruktives Feedback (1-2 Sätze), warum du diese Bewertung vergibst und wie er sich verbessern kann.
+
+**Antwortformat:**
+
+Bewertung: [1-10]
+
+Feedback: [Dein Feedback hier]
+`;
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const result = await model.generateContent(prompt);
+    const evaluation = await result.response.text();
+
+    let rating = 0;
+    let feedback = '';
+
+    const ratingMatch = evaluation.match(/Bewertung:\s*(\d+)/i);
+    const feedbackMatch = evaluation.match(/Feedback:\s*(.+)/i);
+
+    if (ratingMatch && ratingMatch[1]) {
+      rating = parseInt(ratingMatch[1], 10);
     }
 
-    const completionText = response.data.completions[0]?.data.text.trim();
-    const [scoreLine, ...justificationLines] = completionText.split('\n');
-    const scoreMatch = scoreLine.match(/(\d+)/);
-    const score = scoreMatch ? parseInt(scoreMatch[1]) : null;
-    const justification = justificationLines.join('\n').trim();
-
-    if (score === null) {
-      return NextResponse.json(
-        { error: 'Bewertung konnte nicht extrahiert werden.' },
-        { status: 500 }
-      );
+    if (feedbackMatch && feedbackMatch[1]) {
+      feedback = feedbackMatch[1].trim();
     }
 
-    return NextResponse.json({ score, justification });
-  } catch (error: any) {
-    console.error('Fehler bei der Bewertung der Antwort:', error.message);
+    if (isNaN(rating)) {
+      rating = 0;
+      feedback = 'Die Bewertung konnte nicht bestimmt werden. Bitte versuchen Sie es erneut.';
+    }
+
+    return NextResponse.json({ rating, feedback });
+  } catch (error) {
+    console.error('Error evaluating salesperson response:', error);
     return NextResponse.json(
-      { error: 'Fehler bei der Bewertung der Antwort.', details: error.message },
+      {
+        error: 'Failed to evaluate salesperson response',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
